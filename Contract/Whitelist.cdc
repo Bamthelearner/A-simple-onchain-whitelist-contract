@@ -3,24 +3,30 @@ pub contract Whitelisting {
     pub event WhitelistAdded(by: Address, Project: String)
     pub event WhitelistRemoved(by: Address, Project: String)
 
+    //This is a resource interface that disclose the Whitelist function to the public
+    //But I think this is not employed...
     pub resource interface WhitelistPublic {
         pub fun getAddresses(): [Address]
         pub fun registerAddress(acct : AuthAccount)
         pub let Project : String
         pub let ProjectContract : Address
     }
-    
+
+    //This is a resource interface that disclose the Whitelist function to the specific goveners
+    //But I think this is not employed...   
     pub resource interface WhitelistGovernor {
         access(contract) fun removeAddress(address : Address)
     }
 
+    // Resource Whitelist contains an Address to bool map that can protect double address entry and 
+    // enables remove with address (key)
     pub resource Whitelist: WhitelistPublic, WhitelistGovernor {
         access(contract) var Addresses: {Address: Bool}
         pub let Project : String
         pub let ProjectContract : Address
         pub var Active : Bool
 
-
+        //This function enables users to register their address to the whitelist (Whitelisted)
         pub fun registerAddress(acct : AuthAccount) {
             if self.Active {
                 let acctaddress = acct.address
@@ -28,18 +34,22 @@ pub contract Whitelisting {
             }
         }
 
+        //This function enables admin to remove any address from the whitelist
         access(contract) fun removeAddress(address : Address) {
             self.Addresses.remove(key: address) ?? panic("missing Address")
         }
 
+        //return an array of register addresses
         pub fun getAddresses(): [Address] {
             return self.Addresses.keys
         }
 
+        //return a boolean to show the status of the whitelist
         pub fun getWhiteliststatus() : Bool{
             return self.Active
         }
 
+        //This function enables admin to toggle the registry status of the whitelist
         access(contract) fun togglestatus(active : Bool ) {
             self.Active = active
         } 
@@ -62,12 +72,15 @@ pub contract Whitelisting {
         
     }
 
+    //This is a resource interface that disclose the WhitelistCollection function to the public
     pub resource interface WhitelistCollectionPublic{
         pub var ownedWhitelists: @{String: Whitelist}
         pub fun borrowWhitelists(Project: String): &Whitelist
         pub fun getWhitelists(): [String]
     }
 
+    //This is a resource that contains the Whitelist to enable multi whitelisting for an account
+    //The whitelists are mapped to the unique project name
     pub resource WhitelistCollection: WhitelistCollectionPublic {
         // dictionary of Whitelists
         // Whitelist is a resource type with an `UInt64` ID field
@@ -80,7 +93,7 @@ pub contract Whitelisting {
         access(contract) fun deposit(whitelist: @Whitelist) {
             let Project: String = whitelist.Project
 
-            // add the new token to the dictionary which removes the old one
+            // add the new whitelist to the dictionary which removes the old one
             let oldwhitelist <- self.ownedWhitelists[Project] <- whitelist
 
             emit WhitelistAdded (by: self.owner!.address, Project: Project)
@@ -88,7 +101,7 @@ pub contract Whitelisting {
             destroy oldwhitelist
         }
 
-        // withdraw removes an NFT from the collection and moves it to the caller
+        // removes a whitelist
         pub fun removewhitelist(Project: String) {
             let token <- self.ownedWhitelists.remove(key: Project) ?? panic("missing Whitelist")
 
@@ -97,23 +110,25 @@ pub contract Whitelisting {
             destroy token
         }
 
-        // getIDs returns an array of the IDs that are in the collection
+        // returns an array of the projects that are in the collection
         pub fun getWhitelists(): [String] {
             return self.ownedWhitelists.keys
         }
 
+        // removes an address from a specific project whitelist
         pub fun removeAddressfromWhitelist(address : Address, Project : String){
             let whitelistRef : &Whitelist = &self.ownedWhitelists[Project] as &Whitelist  
             whitelistRef.removeAddress(address : address)
         }
 
+        // toggle the state of the whitelist
         pub fun toggleWhiteliststatus(active: Bool, Project : String){
             let whitelistRef : &Whitelist = &self.ownedWhitelists[Project] as &Whitelist  
             whitelistRef.togglestatus(active: active)
         }
 
-        // borrowNFT gets a reference to an NFT in the collection
-        // so that the caller can read its metadata and call its methods
+        // gets a reference to a whitelist in the collection
+        // so that the caller can read its data and call its methods
         pub fun borrowWhitelists(Project: String): &Whitelist {
             return &self.ownedWhitelists[Project] as &Whitelist
         }

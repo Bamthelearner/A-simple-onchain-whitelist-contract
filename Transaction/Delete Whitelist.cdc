@@ -1,4 +1,4 @@
-import Whitelisting from 0x01
+import Whitelisting from "../Contract/Whitelist.cdc"
 
 transaction(Project: String) {
     prepare(signer: AuthAccount) {

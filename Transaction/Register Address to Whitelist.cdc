@@ -1,4 +1,4 @@
-import Whitelisting from "../Contract/Whitelist.cdc"
+import Whitelisting from 0x01
 
 // This transaction is what an account would run
 // to set itself up for WhitelistCollection

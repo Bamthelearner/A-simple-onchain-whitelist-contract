@@ -6,6 +6,8 @@ pub contract Whitelisting {
     pub resource interface WhitelistPublic {
         pub fun getAddresses(): [Address]
         pub fun registerAddress(acct : AuthAccount)
+        pub let Project : String
+        pub let ProjectContract : Address
     }
     
     pub resource interface WhitelistGovernor {
@@ -13,14 +15,17 @@ pub contract Whitelisting {
     }
 
     pub resource Whitelist: WhitelistPublic, WhitelistGovernor {
-        access(contract) var Addresses: {Address: Address}
-        access(contract) let Project : String
-        access(contract) let ProjectContract : Address
+        access(contract) var Addresses: {Address: Bool}
+        pub let Project : String
+        pub let ProjectContract : Address
+        pub var Active : Bool
 
 
         pub fun registerAddress(acct : AuthAccount) {
-            let acctaddress = acct.address
-            self.Addresses[acctaddress] = acctaddress
+            if self.Active {
+                let acctaddress = acct.address
+                self.Addresses[acctaddress] = true
+            }
         }
 
         access(contract) fun removeAddress(address : Address) {
@@ -31,10 +36,19 @@ pub contract Whitelisting {
             return self.Addresses.keys
         }
 
+        pub fun getWhiteliststatus() : Bool{
+            return self.Active
+        }
+
+        access(contract) fun togglestatus(active : Bool ) {
+            self.Active = active
+        } 
+
         init(_Project : String , _ProjectContract : Address) {
             self.Addresses = {}
             self.Project = _Project
             self.ProjectContract = _ProjectContract
+            self.Active = false
         }
     }
 
@@ -54,11 +68,7 @@ pub contract Whitelisting {
         pub fun getWhitelists(): [String]
     }
 
-    pub resource interface WhitelistCollectionAdmin{
-        access(contract) fun removewhitelist(Project: String)
-    }
-
-    pub resource WhitelistCollection: WhitelistCollectionPublic, WhitelistCollectionAdmin {
+    pub resource WhitelistCollection: WhitelistCollectionPublic {
         // dictionary of Whitelists
         // Whitelist is a resource type with an `UInt64` ID field
         pub var ownedWhitelists: @{String : Whitelist}
@@ -95,6 +105,11 @@ pub contract Whitelisting {
         pub fun removeAddressfromWhitelist(address : Address, Project : String){
             let whitelistRef : &Whitelist = &self.ownedWhitelists[Project] as &Whitelist  
             whitelistRef.removeAddress(address : address)
+        }
+
+        pub fun toggleWhiteliststatus(active: Bool, Project : String){
+            let whitelistRef : &Whitelist = &self.ownedWhitelists[Project] as &Whitelist  
+            whitelistRef.togglestatus(active: active)
         }
 
         // borrowNFT gets a reference to an NFT in the collection

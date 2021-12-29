@@ -1,4 +1,4 @@
-import Whitelisting from "../Contract/Whitelist.cdc"
+import Whitelisting from 0x01
 
 
 pub fun main(signer: Address) {

@@ -75,7 +75,7 @@ pub contract Whitelisting {
     //This is a resource interface that disclose the WhitelistCollection function to the public
     pub resource interface WhitelistCollectionPublic{
         pub var ownedWhitelists: @{String: Whitelist}
-        pub fun borrowWhitelists(Project: String): &Whitelist
+        pub fun borrowWhitelists(Project: String): &Whitelist{WhitelistPublic}
         pub fun getWhitelists(): [String]
     }
 
@@ -129,8 +129,8 @@ pub contract Whitelisting {
 
         // gets a reference to a whitelist in the collection
         // so that the caller can read its data and call its methods
-        pub fun borrowWhitelists(Project: String): &Whitelist {
-            return &self.ownedWhitelists[Project] as &Whitelist
+        pub fun borrowWhitelists(Project: String): &Whitelist{WhitelistPublic} {
+            return &self.ownedWhitelists[Project] as &Whitelist{WhitelistPublic}
         }
 
         destroy() {

@@ -10,6 +10,7 @@ pub contract Whitelisting {
         pub fun registerAddress(acct : AuthAccount)
         pub let Project : String
         pub let ProjectContract : Address
+        pub fun getWhiteliststatus() : Bool
     }
 
     //This is a resource interface that disclose the Whitelist function to the specific goveners
@@ -74,9 +75,8 @@ pub contract Whitelisting {
 
     //This is a resource interface that disclose the WhitelistCollection function to the public
     pub resource interface WhitelistCollectionPublic{
-        pub var ownedWhitelists: @{String: Whitelist}
         pub fun borrowWhitelists(Project: String): &Whitelist{WhitelistPublic}
-        pub fun getWhitelists(): [String]
+        pub fun getWhitelists(): {String:Bool}
     }
 
     //This is a resource that contains the Whitelist to enable multi whitelisting for an account
@@ -111,8 +111,14 @@ pub contract Whitelisting {
         }
 
         // returns an array of the projects that are in the collection
-        pub fun getWhitelists(): [String] {
-            return self.ownedWhitelists.keys
+        pub fun getWhitelists(): {String:Bool} {
+            let maps : {String : Bool} = {}
+            let whitelists = self.ownedWhitelists.keys
+            for whitelist in whitelists{
+                let map = &self.ownedWhitelists[whitelist] as &Whitelist
+                maps[whitelist] = map.getWhiteliststatus()
+            }
+            return maps
         }
 
         // removes an address from a specific project whitelist

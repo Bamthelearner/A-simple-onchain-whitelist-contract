@@ -75,7 +75,14 @@ pub contract CampaignRegister {
         //registerAddress register the signer's address to the Addresslist based on the campaigntime, status and the cap
         pub fun registerAddress (acct : AuthAccount) {
             let address = acct.address
-            if UInt64(self.Addresslist.keys.length) < self.CampaignCap {
+
+            //case 1 : no cap for this campaign
+            if self.CampaignCap == 0 {
+                if self.Active && self.checkTime() {
+                    self.Addresslist[address] = true
+                }
+                //case 2 : There is cap for this campaign
+            }else if UInt64(self.Addresslist.keys.length) < self.CampaignCap {
                 if self.Active && self.checkTime() {
                     self.Addresslist[address] = true
                 }
@@ -114,7 +121,7 @@ pub contract CampaignRegister {
         //removeAddress remove an address from the list
         pub fun removeAddress (address : Address) {
             if !self.Active {
-                self.Addresslist.remove(key: address)
+                self.Addresslist.remove(key: address) ??panic ("Cannot find this address from the registry")
             }
         }
         
@@ -159,7 +166,7 @@ pub contract CampaignRegister {
 
         //Remove campaign takes out the campaign resource and returns it (Should be destroyed or handled in the trxn for safety)
         pub fun removeCampaign (campaignname : String) : @Campaign{
-            let campaign <- self.ownedCampaigns.remove(key: campaignname) ?? panic("Do not have this campaign")
+            let campaign <- self.ownedCampaigns.remove(key: campaignname) ?? panic("Cannot find this campaign from collection")
             emit CampaignRemoved(by : campaign.owner?.address, CampaignName : campaign.CampaignName)
             return <- campaign
         }
@@ -179,7 +186,7 @@ pub contract CampaignRegister {
             let campaigns = self.ownedCampaigns.keys
             var maps : {String : Bool} = {}
             for campaign in campaigns {
-                maps[campaign] = self.borrowCampaignsPublic(CampaignName : campaign).getCampaignStatus()
+                maps[campaign] = self.borrowCampaignsPublic(CampaignName : campaign).getCampaignStatus() 
             }
             return maps 
         }

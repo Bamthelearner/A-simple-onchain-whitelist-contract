@@ -1,9 +1,9 @@
-import CampaignRegister from 0x01
+import CampaignRegister from "./Contract/CampaignRegister.cdc"
 
 // This transaction is what an account would run
 // to set itself up for Collection
 
-transaction (CampaignName : String, Start : UFix64, End : UFix64){
+transaction (CampaignName : String, newCap : UInt64){
     let campaigncollection : &CampaignRegister.CampaignCollection
 
     prepare(signer: AuthAccount) {
@@ -13,7 +13,7 @@ transaction (CampaignName : String, Start : UFix64, End : UFix64){
 
         let campaignRef = self.campaigncollection.borrowCampaigns(CampaignName: CampaignName)
         campaignRef.toggleCampaignStatus(Status: false)
-        campaignRef.changeCampaignTime(Start: Start, End: End)
+        campaignRef.changeCampaignCap(newCap: newCap)
 
   
     }

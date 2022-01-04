@@ -1,4 +1,4 @@
-import CampaignRegister from 0x01
+import CampaignRegister from "./Contract/CampaignRegister.cdc"
 
 
 pub fun main(CampaignHolderAddress : Address) : {String : Bool} {

@@ -1,9 +1,9 @@
-import CampaignRegister from 0x01
+import CampaignRegister from "./Contract/CampaignRegister.cdc"
 
 // This transaction is what an account would run
 // to set itself up for Collection
 
-transaction (CampaignName : String, newCap : UInt64){
+transaction (CampaignName : String, removeAddress : Address){
     let campaigncollection : &CampaignRegister.CampaignCollection
 
     prepare(signer: AuthAccount) {
@@ -13,8 +13,7 @@ transaction (CampaignName : String, newCap : UInt64){
 
         let campaignRef = self.campaigncollection.borrowCampaigns(CampaignName: CampaignName)
         campaignRef.toggleCampaignStatus(Status: false)
-        campaignRef.changeCampaignCap(newCap: newCap)
-
+        campaignRef.removeAddress(address: removeAddress)
   
     }
 

@@ -34,21 +34,27 @@ pub contract CampaignRegister {
         pub fun getCampaignCap () : UInt64?
         pub fun getCampaignTime() : [UFix64?]
 
+
+
     } 
 
-    //Resource interface of campaign, disclose the proxy function to the the Emerald Bot for bulk adding addresses to list
-    pub resource interface CampaignProxyInterface {
+    pub resource interface CampaignProxyPrivate {
+        pub let CampaignName : String
+        pub fun proxyregisterAddress(addrlist : [Address]) : [Address] 
+        pub fun checkDistributedCapability(addr : Address) : Bool
+    }
 
-        pub fun proxyregisterAddress(_ ProxyAdrres : Address, Addresslist : [Address]) : [Address]
-    } 
 
     //Campaign resource stores all the function , information and register addresses.
-    pub resource Campaign : CampaignPublic, CampaignProxyInterface{
+    pub resource Campaign : CampaignPublic, CampaignProxyPrivate{
         //CampaignName acts as a unique key to map to the campaign resources in campaign collection
         pub let CampaignName : String
 
         //Addresslist stores all the address registered to the campaign in a dictionary
         access(contract) var Addresslist : {Address : Bool}
+
+        //
+        access(contract) var DistributedCapability : {Address : Bool}
 
         //Active regulates the address registration status, false will disable registration function
         pub var Active : Bool
@@ -70,12 +76,23 @@ pub contract CampaignRegister {
         self.StartTime = _StartTime
         self.EndTime = _EndTime
         self.CampaignCap = _CampaignCap
+        self.DistributedCapability = {}
 
         }
 
         //getAddress returns a list of registered addresses in array
         pub fun getAddress () : [Address]{
             return self.Addresslist.keys
+        }
+
+        //getCampaignStatus returns whether the campaign is active
+        pub fun getCampaignStatus() : Bool {
+            return self.Active
+        }
+
+        //getCampaignTime returns the campaign start and end time
+        pub fun getCampaignTime() : [UFix64?]{
+            return [self.StartTime, self.EndTime]
         }
 
         //getCampaignCap returns the cap of the campaign registration
@@ -112,10 +129,7 @@ pub contract CampaignRegister {
             }
         }
 
-        //getCampaignStatus returns whether the campaign is active
-        pub fun getCampaignStatus() : Bool {
-            return self.Active
-        }
+
 
         //Admin Function
         //toggleCampaignStatus takes in a Bool to change the status of the campaign
@@ -123,10 +137,8 @@ pub contract CampaignRegister {
             self.Active = Status
         }
 
-        //getCampaignTime returns the campaign start and end time
-        pub fun getCampaignTime() : [UFix64?]{
-            return [self.StartTime, self.EndTime]
-        }
+
+
         //Admin Function --> only callable when the campaign registration is not active
         //changeCampaignTime takes in Start and End Time to change the campaign time
         pub fun changeCampaignTime(Start : UFix64, End : UFix64) {
@@ -161,23 +173,28 @@ pub contract CampaignRegister {
             
         }
 
-        //Proxy Funciton --> only allowed for the proxy to call
-        //Add addresses in bulk the addresses that are not added (due to exceeding max cap) will be returned as an array)
-        pub fun proxyregisterAddress(_ ProxyAdrres : Address, Addresslist : [Address]) : [Address] {
-            pre {
+        /* Proxy Function */
+        pub fun proxyregisterAddress(addrlist : [Address]) : [Address] {
+          pre{
                 self.Active == true : "The campaign is not active"
-                self.checkTime() == true : "The campaign is not active at the moment"  
+                self.checkTime() == true : "The campaign is not active at the moment"
+          }
+          let registeraddr : [Address] = []
+          let remainaddr : [Address] = []
+
+            for addr in addrlist {
+                if self.CampaignCap == nil || self.CampaignCap! > UInt64(self.Addresslist.length) {
+                self.Addresslist[addr] = true
+                registeraddr.append(addr)
+                } else {remainaddr.append(addr)}
             }
-            var remainedaddresses :[Address] = []
-            for address in Addresslist {
-                if self.CampaignCap == nil || UInt64(self.Addresslist.length) < self.CampaignCap! {
-                    self.Addresslist[address] = true
-                    emit AddressAddedtoCampaign (by : ProxyAdrres, Address : address, CampaignName : self.CampaignName, CampaignHolderAddress : self.owner?.address)
-                } else { remainedaddresses.append(address) }
-            } 
-            return remainedaddresses
+
+            return remainaddr
         }
-        
+
+        pub fun checkDistributedCapability(addr : Address) : Bool {
+            return self.DistributedCapability.containsKey(addr)
+        }
 
     }
 
@@ -193,21 +210,29 @@ pub contract CampaignRegister {
 
         pub fun borrowCampaignsPublic(CampaignName : String) : &Campaign{CampaignPublic}
         pub fun getCampaigns() : {String : Bool}
-        
+        pub fun getCampaignCapslist() : {Address : [String]} 
+
+        access(contract) fun addcampaigntocap (campaignaddr : Address, campaignname : String) 
+        access(contract) fun depositcapability(campaignaddr : Address, campaigncap : @CampaignCollectionCapability)
     }
+
+
 
     //Resource CampaignCollection stores campaigns using Campaign Name as key
     pub resource CampaignCollection : CampaignCollectionPublic {
 
         //using Campaign Name as key
         access(contract) var ownedCampaigns : @{String : Campaign}
+        access(contract) var ownedCampaignCaps : @{Address : CampaignCollectionCapability}
 
         init(){
             self.ownedCampaigns <- {}
+            self.ownedCampaignCaps <- {}
         }
 
         destroy () { 
             destroy self.ownedCampaigns
+            destroy self.ownedCampaignCaps
         }
 
         //Deposit stores the campaign resource to the collection
@@ -243,53 +268,84 @@ pub contract CampaignRegister {
             }
             return maps 
         }
-    }
 
-    pub resource interface CampaignProxyPublic {
-        pub fun getCampaignProxies() 
-    }
+        /* Capability functions */
 
-    // Campaign Proxy helps register addresses in bulk and aims to be called by Emerald Bot by Emerald City DAO (A place where made this contract happens)
-    pub resource CampaignProxy {
-        access(contract) var CampaignProxies : {Address : ProxyDictionary}
-
-        init () {
-            self.CampaignProxies = {}
+        //
+        pub fun getCampaignCollectionCapabilityRef(addr : Address) : &CampaignCollectionCapability {
+            return &self.ownedCampaignCaps[addr] as &CampaignCollectionCapability
         }
 
-        // Returns the list of CampaignProxies saved in the Proxy Resource
-        pub fun getCampaignProxies() : {Address : [String]} {
-            var proxies : {Address : [String]} = {}
-            for address in self.CampaignProxies.keys {
-                proxies[address] = self.CampaignProxies[address]!.keys()
+        //returns a {Campaign Address : [Campaign] } Map 
+        pub fun getCampaignCapslist() : {Address : [String]} {
+            let campaignaddrs = self.ownedCampaignCaps.keys
+            var maps : {Address : [String]} = {}
+            for campaignaddr in campaignaddrs {
+
+                let list = self.getCampaignCollectionCapabilityRef(addr: campaignaddr).getCampaignRefList()
+                maps[campaignaddr] = list
             }
-
-            return proxies
+            return maps 
         }
 
-        pub fun getProxyDictionary(address : Address) : ProxyDictionary{
-            return self.CampaignProxies[address] ?? panic("No such ProxyDictionary")
+        access(contract) fun depositcapability(campaignaddr : Address, campaigncap : @CampaignCollectionCapability) {
+            self.ownedCampaignCaps[campaignaddr] <-! campaigncap
+        }
+
+        access(contract) fun addcampaigntocap (campaignaddr : Address, campaignname : String) {
+            self.getCampaignCollectionCapabilityRef(addr: campaignaddr).campaignnames.append(campaignname)
+        }
+
+        pub fun giveCap (campaignname : String, receiver : &CampaignCollection{CampaignCollectionPublic}, capability : Capability<&CampaignCollection> ) {
+            let campaignaddr = self.owner!.address
+            let receiveraddr = receiver.owner!.address
+            if receiver.getCampaignCapslist().containsKey(campaignaddr) {
+                receiver.depositcapability(campaignaddr:campaignaddr, campaigncap : <- create CampaignCollectionCapability(_receivedcapability : capability,
+                                                                                                _campaignnames : campaignname ,  
+                                                                                                _campaignaddr : campaignaddr) )
+            } else {
+                receiver.addcampaigntocap (campaignaddr : campaignaddr, campaignname : campaignname)
+            }
+                self.borrowCampaigns(CampaignName: campaignname).DistributedCapability.insert(key: campaignaddr, true)
+
         }
 
     }
 
-    //Create New Campaign Collection
-    pub fun createCampaignCollection() : @CampaignCollection {
-        return <- create CampaignCollection()
+
+  //Create New Campaign Collection
+  pub fun createCampaignCollection() : @CampaignCollection {
+      return <- create CampaignCollection()
+  }
+
+  pub resource CampaignCollectionCapability {
+    access(contract) let receivedcapability : Capability<&CampaignCollection> 
+    pub let campaignnames : [String]
+    pub let campaignaddr : Address
+
+    init(_receivedcapability : Capability<&CampaignCollection>, _campaignnames : String , _campaignaddr : Address){
+        self.receivedcapability = _receivedcapability
+        self.campaignnames = [_campaignnames]
+        self.campaignaddr = _campaignaddr
     }
 
-    pub struct ProxyDictionary {
-        access(contract) var dictionary : {String : Capability<&Campaign{CampaignProxyInterface}>}
-
-        pub fun keys() : [String] {
-            return self.dictionary.keys
+    pub fun getCampaginRef(campaignaddr : Address, campaignname : String): &Campaign{CampaignProxyPrivate} {
+        post{
+            campaignRef.CampaignName == campaignname : "This is not the same campaign as you wanted to borrow"
+            campaignRef.owner!.address == campaignaddr : "You are not allowed to borrow this reference"
+            campaignRef.checkDistributedCapability(addr: campaignaddr)  : "You are not allowed to borrow this reference"
+            
         }
+        let campaigncollectionRef = self.receivedcapability.borrow() ?? panic("This capability does not exist")
+        let campaignRef : &Campaign{CampaignProxyPrivate} = &campaigncollectionRef.ownedCampaigns[campaignname]as &Campaign{CampaignProxyPrivate}
+        return campaignRef
 
-        init() {
-            self.dictionary = {}
-        }
     }
 
+    pub fun getCampaignRefList(): [String]{
+        return self.campaignnames
+    }
 
+  }
 
 }

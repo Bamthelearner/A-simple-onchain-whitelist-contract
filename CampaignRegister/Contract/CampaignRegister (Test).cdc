@@ -320,7 +320,7 @@ pub contract CampaignRegister {
 
   pub resource CampaignCollectionCapability {
     access(contract) let receivedcapability : Capability<&CampaignCollection> 
-    pub let campaignnames : [String]
+    access(contract) var campaignnames : [String]
     pub let campaignaddr : Address
 
     init(_receivedcapability : Capability<&CampaignCollection>, _campaignnames : String , _campaignaddr : Address){

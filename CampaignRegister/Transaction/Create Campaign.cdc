@@ -9,7 +9,7 @@ transaction (CampaignName : String, StartTime : UFix64, EndTime : UFix64, Campai
     prepare(signer: AuthAccount) {
         // Return early if the account already has a collection
         if signer.borrow<&CampaignRegister.CampaignCollection>(from: CampaignRegister.CampaignRegisterStoragePath) != nil {
-            return
+
         }else{
 
             // Create a new empty collection

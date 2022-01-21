@@ -1,4 +1,5 @@
-import CampaignRegister from "./Contract/CampaignRegister.cdc"
+//import CampaignRegister from "../Contracts/CampaignRegister.cdc"
+import CampaignRegister from 0xc68c624ebbbd3aa9
 
 // This transaction is what an account would run
 // to set itself up for Collection
@@ -11,7 +12,7 @@ transaction (CampaignName : String, CampaignHolderAddress : Address){
         self.campaigncollection = getAccount(CampaignHolderAddress).getCapability(CampaignRegister.CampaignRegisterPublicPath).borrow<&CampaignRegister.CampaignCollection{CampaignRegister.CampaignCollectionPublic}>()
                                             ?? panic("Could not get reference to the Collection")            
 
-        self.campaigncollection.borrowCampaignsPublic(CampaignName: CampaignName).registerAddress(acct: signer)
+        self.campaigncollection.borrowCampaignsPublic(campaignname: CampaignName).registerAddress(acct: signer)
   
     }
 

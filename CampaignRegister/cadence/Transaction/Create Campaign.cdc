@@ -1,9 +1,10 @@
-import CampaignRegister from "./Contract/CampaignRegister.cdc"
+//import CampaignRegister from "../Contracts/CampaignRegister.cdc"
+import CampaignRegister from 0xc68c624ebbbd3aa9
 
 // This transaction is what an account would run
 // to set itself up for Collection
 
-transaction (CampaignName : String, StartTime : UFix64, EndTime : UFix64, CampaignCap : UInt64){
+transaction (CampaignName : String, StartTime : UFix64?, EndTime : UFix64?, CampaignCap : UInt64?){
     
 
     prepare(signer: AuthAccount) {
@@ -20,7 +21,9 @@ transaction (CampaignName : String, StartTime : UFix64, EndTime : UFix64, Campai
 
             // create a public capability for the collection
             signer.link<&CampaignRegister.CampaignCollection{CampaignRegister.CampaignCollectionPublic}>(CampaignRegister.CampaignRegisterPublicPath, target: CampaignRegister.CampaignRegisterStoragePath)
-
+            
+            // create a private capability for the collection
+            signer.link<&CampaignRegister.CampaignCollection>(CampaignRegister.CampaignRegisterPrivatePath, target: CampaignRegister.CampaignRegisterStoragePath)
         }
         // Borrow the reference
         let campaigncollection = signer.borrow<&CampaignRegister.CampaignCollection>(from: CampaignRegister.CampaignRegisterStoragePath)

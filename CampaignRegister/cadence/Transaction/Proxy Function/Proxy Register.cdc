@@ -1,4 +1,5 @@
-import CampaignRegister from 0x01
+//import CampaignRegister from "../../Contracts/CampaignRegister.cdc"
+import CampaignRegister from 0xc68c624ebbbd3aa9
 
 // This transaction is what an account would run
 // to set itself up for Collection

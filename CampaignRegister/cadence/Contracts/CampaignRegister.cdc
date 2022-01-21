@@ -269,9 +269,11 @@ pub contract CampaignRegister {
 
         //Deposit stores the campaign resource to the collection
         pub fun deposit (campaign : @Campaign) {
+          pre{ self.ownedCampaigns[campaign.CampaignName] == nil : "This campaignname is already used" }
             let campaignname : String = campaign.CampaignName
+            
             self.ownedCampaigns[campaignname] <-! campaign
-
+        
         }
 
         //Remove campaign 
@@ -308,7 +310,6 @@ pub contract CampaignRegister {
         /* When The resource of the CamapignCollection is created, only deposit the name of the campaign, else create resource */
 
         pub fun getCampaignCollectionCapabilityRef(addr : Address) : &CampaignCollectionCapability {
-            log ("c")
             return &self.ownedCampaignCaps[addr] as &CampaignCollectionCapability
         }
 
@@ -318,7 +319,6 @@ pub contract CampaignRegister {
 
         pub fun addcampaigntocap (campaignaddr : Address, campaignname : String) {
             if !self.getCampaignCollectionCapabilityRef(addr: campaignaddr).campaignnames.contains(campaignname) {
-            log ("b")
                 self.getCampaignCollectionCapabilityRef(addr: campaignaddr).campaignnames.append(campaignname)
             }
         }
@@ -329,16 +329,14 @@ pub contract CampaignRegister {
             let receiveraddr = receiver.owner!.address
             log (receiveraddr)
             if receiver.getCampaignCapslist().containsKey(campaignaddr) {
-            log ("a")
                 receiver.addcampaigntocap (campaignaddr : campaignaddr, campaignname : campaignname)
             } else {
                 receiver.depositcapability(campaignaddr:campaignaddr, campaigncap : <- create CampaignCollectionCapability(_receivedcapability : capability,
                                                                                                 _campaignnames : campaignname ,  
                                                                                                 _campaignaddr : campaignaddr) )
             }
-            log ("d")
+
             self.borrowCampaigns(campaignname: campaignname).addDistributedCapability(addr: campaignaddr)
-            log ("e")
 
         }
 
@@ -377,7 +375,7 @@ pub contract CampaignRegister {
                 campaignRef.checkDistributedCapability(addr: campaignaddr)  : "You are not allowed to borrow this reference"
                 
             }
-            let campaigncollectionRef = self.receivedcapability.borrow() ?? panic("This capability does not exist")
+            let campaigncollectionRef = self.receivedcapability.borrow() 
             let campaignRef : &Campaign{CampaignProxyPrivate} = &campaigncollectionRef.ownedCampaigns[campaignname]as &Campaign{CampaignProxyPrivate}
             return campaignRef
 
@@ -397,7 +395,7 @@ pub contract CampaignRegister {
 
     /* Create Campaign Function */
     //Create a new campaign and deposit to the collection, using CampaignName as the key
-    pub fun createCampaign(to: &CampaignCollection ,CampaignName : String, StartTime : UFix64, EndTime : UFix64, CampaignCap : UInt64) {
+    pub fun createCampaign(to: &CampaignCollection ,CampaignName : String, StartTime : UFix64?, EndTime : UFix64?, CampaignCap : UInt64?) {
         let newcampaign <- create Campaign(_CampaignName : CampaignName, _StartTime : StartTime, _EndTime : EndTime, _CampaignCap : CampaignCap)
         to.deposit(campaign : <- newcampaign)
     }
